@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { CreateMemberV1Dto } from '../dto';
 import { MembersV1Service } from '../services';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('members')
 @Controller({
   path: '/members',
   version: '1',
