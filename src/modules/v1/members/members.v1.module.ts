@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { MembersV1Service } from './members.v1.service';
-import { MembersV1Controller } from './members.v1.controller';
-import { MembersV1Repository } from './members.v1.repository';
+import { MembersV1Service } from './services';
+import { MembersV1Controller } from './controllers';
+import { MembersV1Repository } from './repositories';
 
 @Module({
   providers: [MembersV1Service, MembersV1Repository],

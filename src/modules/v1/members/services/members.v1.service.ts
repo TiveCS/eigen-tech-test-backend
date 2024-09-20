@@ -3,13 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { MembersV1Repository } from './members.v1.repository';
-import { CreateMemberV1Dto } from './dto';
+import { MembersV1Repository } from '../repositories';
+import { CreateMemberV1Dto } from '../dto';
 import {
   CreateMemberV1Result,
   GetMemberByCodeV1Result,
   GetMembersV1Result,
-} from './types';
+} from '../types';
 import { Prisma } from '@prisma/client';
 import { PrismaClientError } from '~lib/prisma/prisma.error';
 

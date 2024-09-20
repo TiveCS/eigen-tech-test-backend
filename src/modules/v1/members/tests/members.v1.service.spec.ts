@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
-import { MembersV1Service } from '../members.v1.service';
-import { MembersV1Repository } from '../members.v1.repository';
+import { MembersV1Service } from '../services';
+import { MembersV1Repository } from '../repositories';
 import { PrismaModule } from '~lib/prisma/prisma.module';
 import { Member, Prisma } from '@prisma/client';
 import { PrismaService } from '~lib/prisma/prisma.service';

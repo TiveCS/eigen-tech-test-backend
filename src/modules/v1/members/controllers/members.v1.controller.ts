@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
-import { CreateMemberV1Dto } from './dto';
-import { MembersV1Service } from './members.v1.service';
+import { CreateMemberV1Dto } from '../dto';
+import { MembersV1Service } from '../services';
 
 @Controller({
   path: '/members',
