@@ -1,11 +1,17 @@
 import { Module } from '@nestjs/common';
-import { BooksV1Controller } from './controllers';
-import { BooksV1Service } from './services';
-import { BooksV1Repository } from './repositories';
+import { BookBorrowsV1Controller, BooksV1Controller } from './controllers';
+import { BookBorrowsV1Service, BooksV1Service } from './services';
+import { BookBorrowsV1Repository, BooksV1Repository } from './repositories';
+import { MembersV1Module } from '../members/members.v1.module';
 
 @Module({
-  controllers: [BooksV1Controller],
-  providers: [BooksV1Service, BooksV1Repository],
-  exports: [BooksV1Service, BooksV1Repository],
+  imports: [MembersV1Module],
+  controllers: [BooksV1Controller, BookBorrowsV1Controller],
+  providers: [
+    BooksV1Service,
+    BooksV1Repository,
+    BookBorrowsV1Service,
+    BookBorrowsV1Repository,
+  ],
 })
 export class BooksV1Module {}

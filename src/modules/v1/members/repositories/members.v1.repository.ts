@@ -18,11 +18,25 @@ export class MembersV1Repository {
     });
   }
 
-  async findByCode(code: string) {
-    return this.prisma.member.findUnique({ where: { code } });
+  async findByCode(code: string, options?: { includeBorrowedBooks?: boolean }) {
+    return this.prisma.member.findUnique({
+      where: { code },
+      include: options
+        ? {
+            borrowedBooks: { where: { returnedAt: null } },
+          }
+        : undefined,
+    });
   }
 
   async create(data: Prisma.MemberCreateInput) {
     return this.prisma.member.create({ data, select: { code: true } });
+  }
+
+  async updateByCode(code: string, data: Prisma.MemberUpdateInput) {
+    return this.prisma.member.update({
+      where: { code },
+      data,
+    });
   }
 }

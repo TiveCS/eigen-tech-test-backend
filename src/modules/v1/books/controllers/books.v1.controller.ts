@@ -12,6 +12,7 @@ export class BooksV1Controller {
   constructor(private readonly booksService: BooksV1Service) {}
 
   @Get()
+  @ApiResponse({ status: 200, description: 'Books found' })
   async getBooks() {
     return this.booksService.getBooks();
   }
@@ -24,6 +25,8 @@ export class BooksV1Controller {
   }
 
   @Post()
+  @ApiResponse({ status: 201, description: 'Book successfully created' })
+  @ApiResponse({ status: 400, description: 'Book with code already exists' })
   async createBook(@Body() dto: CreateBookV1Dto) {
     return this.booksService.createBook(dto);
   }

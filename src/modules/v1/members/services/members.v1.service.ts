@@ -12,6 +12,7 @@ import {
 } from '../types';
 import { Prisma } from '@prisma/client';
 import { PrismaClientError } from '~lib/prisma/prisma.error';
+import { getLocalTimeZone, now } from '@internationalized/date';
 
 @Injectable()
 export class MembersV1Service {
@@ -28,7 +29,9 @@ export class MembersV1Service {
   }
 
   async getMemberByCode(code: string): Promise<GetMemberByCodeV1Result> {
-    const member = await this.membersRepository.findByCode(code);
+    const member = await this.membersRepository.findByCode(code, {
+      includeBorrowedBooks: true,
+    });
 
     if (!member) throw new NotFoundException('Member not found');
 
@@ -48,5 +51,45 @@ export class MembersV1Service {
       }
       throw error;
     }
+  }
+
+  async penalizeMember(code: string) {
+    try {
+      return await this.membersRepository.updateByCode(code, {
+        penalizedUntil: now(getLocalTimeZone()).add({ days: 3 }).toDate(),
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === PrismaClientError.RecordNotFound) {
+          throw new NotFoundException('Member not found');
+        }
+      }
+      throw error;
+    }
+  }
+
+  async forgiveMember(code: string) {
+    try {
+      return await this.membersRepository.updateByCode(code, {
+        penalizedUntil: null,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === PrismaClientError.RecordNotFound) {
+          throw new NotFoundException('Member not found');
+        }
+      }
+      throw error;
+    }
+  }
+
+  async checkPenalized(code: string): Promise<boolean> {
+    const member = await this.membersRepository.findByCode(code);
+
+    if (!member) throw new NotFoundException('Member not found');
+
+    const nowTime = now(getLocalTimeZone());
+
+    return member.penalizedUntil && member.penalizedUntil > nowTime.toDate();
   }
 }

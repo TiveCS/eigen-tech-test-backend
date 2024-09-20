@@ -14,12 +14,14 @@ datasource db {
 }
 
 model Member {
-  code          String         @id
-  name          String
-  borrowedBooks BorrowedBook[]
+  code           String         @id
+  name           String
+  borrowedBooks  BorrowedBook[]
+  penalizedUntil DateTime?
 }
 
 model BorrowedBook {
+  id         String    @id @default(cuid())
   memberCode String
   bookCode   String
   borrowedAt DateTime
@@ -29,7 +31,7 @@ model BorrowedBook {
   member Member @relation(fields: [memberCode], references: [code])
   book   Book   @relation(fields: [bookCode], references: [code])
 
-  @@unique([memberCode, bookCode])
+  @@unique([memberCode, bookCode, returnedAt])
 }
 
 model Book {
