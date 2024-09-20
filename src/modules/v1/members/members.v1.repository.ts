@@ -6,8 +6,16 @@ import { PrismaService } from '~lib/prisma/prisma.service';
 export class MembersV1Repository {
   constructor(private prisma: PrismaService) {}
 
-  async findMany() {
-    return this.prisma.member.findMany();
+  async findMany(includeBorrowedBooks = false) {
+    return this.prisma.member.findMany({
+      include: includeBorrowedBooks
+        ? {
+            _count: {
+              select: { borrowedBooks: { where: { returnedAt: null } } },
+            },
+          }
+        : undefined,
+    });
   }
 
   async findByCode(code: string) {
@@ -15,6 +23,6 @@ export class MembersV1Repository {
   }
 
   async create(data: Prisma.MemberCreateInput) {
-    return this.prisma.member.create({ data });
+    return this.prisma.member.create({ data, select: { code: true } });
   }
 }
