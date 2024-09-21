@@ -1,15 +1,15 @@
-import { getLocalTimeZone, now } from '@internationalized/date';
 import {
-  BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaClientError } from '~lib/prisma/prisma.error';
 import { MembersV1Service } from '~modules/v1/members/services';
 import { BorrowBookV1Dto } from '../dto';
 import { BookBorrowsV1Repository } from '../repositories';
-import { Prisma } from '@prisma/client';
-import { PrismaClientError } from '~lib/prisma/prisma.error';
+import { BorrowBookV1Result, ReturnBookV1Result } from '../types';
 
 @Injectable()
 export class BookBorrowsV1Service {
@@ -18,7 +18,7 @@ export class BookBorrowsV1Service {
     private readonly membersService: MembersV1Service,
   ) {}
 
-  async borrowBook(dto: BorrowBookV1Dto) {
+  async borrowBook(dto: BorrowBookV1Dto): Promise<BorrowBookV1Result> {
     const isMemberPenalized = await this.membersService.checkPenalized(
       dto.memberCode,
     );
@@ -33,7 +33,7 @@ export class BookBorrowsV1Service {
       await this.bookBorrowsRepository.findByMemberAndBookCode(dto);
 
     if (foundBorrowData)
-      throw new BadRequestException('Book already borrowed by this member');
+      throw new ConflictException('Book already borrowed by this member');
 
     try {
       const [borrowData] = await this.bookBorrowsRepository.createBorrow(dto);
@@ -48,21 +48,25 @@ export class BookBorrowsV1Service {
     }
   }
 
-  async returnBook(borrowId: string) {
+  async returnBook(
+    borrowId: string,
+    returnedAt: Date,
+  ): Promise<ReturnBookV1Result> {
     const foundBorrowData = await this.bookBorrowsRepository.findById(borrowId);
 
     if (!foundBorrowData) throw new NotFoundException('Borrow data not found');
 
     if (foundBorrowData.returnedAt)
-      throw new BadRequestException('Book already returned');
-
-    const nowTime = now(getLocalTimeZone());
+      throw new ConflictException('Book already returned');
 
     let penalizedUntil: Date | null = null;
-    if (foundBorrowData.dueDate < nowTime.toDate()) {
+    const isShouldPenalized = foundBorrowData.dueDate < returnedAt;
+
+    if (isShouldPenalized) {
       const penalizedMember = await this.membersService.penalizeMember(
         foundBorrowData.memberCode,
       );
+
       penalizedUntil = penalizedMember.penalizedUntil;
     }
 

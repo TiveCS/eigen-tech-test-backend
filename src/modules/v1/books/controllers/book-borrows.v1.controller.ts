@@ -1,6 +1,7 @@
+import { getLocalTimeZone, now } from '@internationalized/date';
 import { Body, Controller, Param, Patch, Post } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
@@ -20,7 +21,7 @@ export class BookBorrowsV1Controller {
 
   @Post()
   @ApiCreatedResponse({ description: 'Book successfully borrowed' })
-  @ApiBadRequestResponse({ description: 'Book already borrowed by member' })
+  @ApiConflictResponse({ description: 'Book already borrowed by member' })
   @ApiForbiddenResponse({ description: 'Member is penalized' })
   @ApiNotFoundResponse({ description: 'Member or book not found' })
   async borrowBook(@Body() dto: BorrowBookV1Dto) {
@@ -29,9 +30,12 @@ export class BookBorrowsV1Controller {
 
   @Patch('/:borrowId')
   @ApiOkResponse({ description: 'Book successfully returned' })
-  @ApiBadRequestResponse({ description: 'Book already returned' })
+  @ApiConflictResponse({ description: 'Book already returned' })
   @ApiNotFoundResponse({ description: 'Borrow data not found' })
   async returnBook(@Param('borrowId') borrowId: string) {
-    return this.bookBorrowsService.returnBook(borrowId);
+    return this.bookBorrowsService.returnBook(
+      borrowId,
+      now(getLocalTimeZone()).toDate(),
+    );
   }
 }

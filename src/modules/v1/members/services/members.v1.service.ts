@@ -1,18 +1,21 @@
+import { getLocalTimeZone, now } from '@internationalized/date';
 import {
-  BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { MembersV1Repository } from '../repositories';
-import { CreateMemberV1Dto } from '../dto';
-import {
-  CreateMemberV1Result,
-  GetMemberByCodeV1Result,
-  GetMembersV1Result,
-} from '../types';
 import { Prisma } from '@prisma/client';
 import { PrismaClientError } from '~lib/prisma/prisma.error';
-import { getLocalTimeZone, now } from '@internationalized/date';
+import { CreateMemberV1Dto } from '../dto';
+import { MembersV1Repository } from '../repositories';
+import {
+  CheckMemberPenalizedV1Result,
+  CreateMemberV1Result,
+  ForgiveMemberV1Result,
+  GetMemberByCodeV1Result,
+  GetMembersV1Result,
+  PenalizeMemberV1Result,
+} from '../types';
 
 @Injectable()
 export class MembersV1Service {
@@ -44,7 +47,7 @@ export class MembersV1Service {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === PrismaClientError.UniqueConstraintViolation) {
-          throw new BadRequestException(
+          throw new ConflictException(
             `Member with code: ${data.code} already exists`,
           );
         }
@@ -53,7 +56,7 @@ export class MembersV1Service {
     }
   }
 
-  async penalizeMember(code: string) {
+  async penalizeMember(code: string): Promise<PenalizeMemberV1Result> {
     try {
       return await this.membersRepository.updateByCode(code, {
         penalizedUntil: now(getLocalTimeZone()).add({ days: 3 }).toDate(),
@@ -68,7 +71,7 @@ export class MembersV1Service {
     }
   }
 
-  async forgiveMember(code: string) {
+  async forgiveMember(code: string): Promise<ForgiveMemberV1Result> {
     try {
       return await this.membersRepository.updateByCode(code, {
         penalizedUntil: null,
@@ -83,13 +86,17 @@ export class MembersV1Service {
     }
   }
 
-  async checkPenalized(code: string): Promise<boolean> {
+  async checkPenalized(code: string): Promise<CheckMemberPenalizedV1Result> {
     const member = await this.membersRepository.findByCode(code);
 
     if (!member) throw new NotFoundException('Member not found');
 
     const nowTime = now(getLocalTimeZone());
 
-    return member.penalizedUntil && member.penalizedUntil > nowTime.toDate();
+    const result =
+      member.penalizedUntil !== null &&
+      member.penalizedUntil > nowTime.toDate();
+
+    return result;
   }
 }

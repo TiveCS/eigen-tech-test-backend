@@ -1,14 +1,20 @@
+import { getLocalTimeZone, now } from '@internationalized/date';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { MembersV1Service } from '../services';
-import { MembersV1Repository } from '../repositories';
+import { Prisma } from '@prisma/client';
+import { PrismaClientError } from '~lib/prisma/prisma.error';
 import { PrismaModule } from '~lib/prisma/prisma.module';
-import { Member, Prisma } from '@prisma/client';
 import { PrismaService } from '~lib/prisma/prisma.service';
 import { mockPrisma } from '~utils/tests/prisma-mock';
-import { CreateMemberV1Result, GetMembersV1Result } from '../types';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CreateMemberV1Dto } from '../dto';
-import { PrismaClientError } from '~lib/prisma/prisma.error';
+import { MembersV1Repository } from '../repositories';
+import { MembersV1Service } from '../services';
+import {
+  CreateMemberV1Result,
+  GetMemberByCodeV1Result,
+  GetMembersV1Result,
+  MemberWithBorrowedBooks,
+} from '../types';
 
 describe('MembersV1Service', () => {
   let membersService: MembersV1Service;
@@ -35,8 +41,18 @@ describe('MembersV1Service', () => {
       ];
 
       jest.spyOn(membersRepository, 'findMany').mockResolvedValue([
-        { code: 'MB-1', name: 'Member 1', _count: { borrowedBooks: 2 } },
-        { code: 'MB-2', name: 'Member 2', _count: { borrowedBooks: 0 } },
+        {
+          code: 'MB-1',
+          name: 'Member 1',
+          _count: { borrowedBooks: 2 },
+          penalizedUntil: null,
+        },
+        {
+          code: 'MB-2',
+          name: 'Member 2',
+          _count: { borrowedBooks: 0 },
+          penalizedUntil: new Date(),
+        },
       ]);
 
       const result = await membersService.getMembers();
@@ -57,11 +73,18 @@ describe('MembersV1Service', () => {
 
   describe('getMemberByCode', () => {
     it('should return a member by code', async () => {
-      const expectedResult: Member = { code: 'MB-1', name: 'Member 1' };
+      const expectedResult: GetMemberByCodeV1Result = {
+        code: 'MB-1',
+        name: 'Member 1',
+        penalizedUntil: null,
+        borrowedBooks: [],
+      };
 
       jest.spyOn(membersRepository, 'findByCode').mockResolvedValue({
         code: 'MB-1',
         name: 'Member 1',
+        borrowedBooks: [],
+        penalizedUntil: null,
       });
 
       const result = await membersService.getMemberByCode('MB-1');
@@ -105,8 +128,42 @@ describe('MembersV1Service', () => {
       jest.spyOn(membersRepository, 'create').mockRejectedValue(prismaError);
 
       await expect(membersService.createMember(dto)).rejects.toThrow(
-        BadRequestException,
+        ConflictException,
       );
+    });
+  });
+
+  describe('checkPenalized', () => {
+    it('should return true, if member in penalized period', async () => {
+      const expectedResult = true;
+      const mockMember: MemberWithBorrowedBooks = {
+        code: 'MB-1',
+        name: 'Mamat',
+        penalizedUntil: now(getLocalTimeZone()).add({ days: 3 }).toDate(),
+        borrowedBooks: [],
+      };
+
+      jest.spyOn(membersRepository, 'findByCode').mockResolvedValue(mockMember);
+
+      const result = await membersService.checkPenalized(mockMember.code);
+
+      expect(result).toEqual(expectedResult);
+    });
+
+    it('should return false, if penalizedUntil is null or has been passed', async () => {
+      const expectedResult = false;
+      const mockMember: MemberWithBorrowedBooks = {
+        code: 'MB-1',
+        name: 'Mamat',
+        penalizedUntil: null,
+        borrowedBooks: [],
+      };
+
+      jest.spyOn(membersRepository, 'findByCode').mockResolvedValue(mockMember);
+
+      const result = await membersService.checkPenalized(mockMember.code);
+
+      expect(result).toEqual(expectedResult);
     });
   });
 });
